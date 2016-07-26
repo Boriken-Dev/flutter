@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Flexible space back centers on iOS', (WidgetTester tester) async {
+  testWidgets('FlexibleSpaceBar centers title on iOS', (WidgetTester tester) async {
     await tester.pumpWidget(
       new MaterialApp(
         theme: new ThemeData(platform: TargetPlatform.android),
