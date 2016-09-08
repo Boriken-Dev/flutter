@@ -1,9 +1,9 @@
 # Specify analysis options.
 
-# This file is the .analysis_options file used by Flutter editors, such as
-# Atom. It is very similar to flutter_tools/flutter_analysis_options; the only
-# difference (currently) is the public_member_api_docs option, which triggers
-# too many messages to be used in editors.
+# This file contains the analysis options used by Flutter editors, such as Atom.
+# It is very similar to .analysis_options_flutter_analyze;
+# the only difference (currently) is the public_member_api_docs option,
+# which triggers too many messages to be used in editors.
 
 analyzer:
   language:
