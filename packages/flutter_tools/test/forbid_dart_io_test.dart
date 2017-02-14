@@ -4,14 +4,13 @@
 
 import 'package:flutter_tools/src/base/file_system.dart';
 import 'package:flutter_tools/src/base/platform.dart';
-import 'package:path/path.dart' as path;
 import 'package:test/test.dart';
 
 void main() {
   setUp(() {
-    String flutterTools = path.join(platform.environment['FLUTTER_ROOT'],
+    String flutterTools = fs.path.join(platform.environment['FLUTTER_ROOT'],
         'packages', 'flutter_tools');
-    assert(path.equals(fs.currentDirectory.path, flutterTools));
+    assert(fs.path.equals(fs.currentDirectory.path, flutterTools));
   });
 
   test('no unauthorized imports of dart:io', () {
@@ -38,6 +37,6 @@ bool _isDartFile(FileSystemEntity entity) =>
     entity is File && entity.path.endsWith('.dart');
 
 bool _isNotWhitelisted(FileSystemEntity entity) =>
-    entity.path != path.join('lib', 'src', 'base', 'io.dart');
+    entity.path != fs.path.join('lib', 'src', 'base', 'io.dart');
 
 File _asFile(FileSystemEntity entity) => entity;
