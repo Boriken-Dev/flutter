@@ -1,4 +1,4 @@
-package com.example.android_embedding_2
+package com.example.android_embedding_v2_smoke_test
 
 import androidx.annotation.NonNull;
 import dev.flutter.plugins.GeneratedPluginRegistrant
