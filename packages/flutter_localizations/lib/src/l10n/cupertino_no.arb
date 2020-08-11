@@ -9,6 +9,7 @@
   "postMeridiemAbbreviation": "PM",
   "todayLabel": "I dag",
   "alertDialogLabel": "Varsel",
+  "tabSemanticsLabel": "Fane $tabIndex av $tabCount",
   "timerPickerHourLabelOne": "time",
   "timerPickerHourLabelOther": "timer",
   "timerPickerMinuteLabelOne": "min.",
@@ -19,6 +20,5 @@
   "copyButtonLabel": "Kopiér",
   "pasteButtonLabel": "Lim inn",
   "selectAllButtonLabel": "Velg alle",
-  "tabSemanticsLabel": "Fane $tabIndex av $tabCount",
   "modalBarrierDismissLabel": "Avvis"
 }
