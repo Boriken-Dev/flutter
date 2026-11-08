@@ -1,29 +1,31 @@
 # Removed from this mirror
 
-A scanner-clean mirror of flutter/flutter's `stable` branch and its release tags.
+A scanner-clean mirror of flutter/flutter's `stable` branch with its release tags, and of
+`master`, upstream's development branch.
 Every blob a malware, secret or archive scanner may refuse was removed from every
 commit (`git filter-repo --strip-blobs-with-ids`); the rest of the history is upstream's.
 
 - upstream `stable` commit: `c197ca5199e9ee5661e865596c9c07294dfab51c`
-- mirror `stable` commit: `255b2d07cc58470e63547816d77d0a4d04357b42`
+- mirror `stable` commit: `2c972c48e542051dec5b46548c3e69ba956e9ef3`
+- mirror `master` commit: `ada369a4843cce989a073571097a58bac5befa72`
 - tags: 711
-- blobs scanned in the result: 366659
+- blobs scanned in the result: 408707
 - blobs removed: 36
 
 A removed blob is absent from all commits that held it, under whatever path. The
 path shown is one place it was seen. Tests that read these fixtures fail.
 
-## Using `master`
+## `master` and its engine
 
-`master` has no `bin/internal/engine.version`: the tool computes the engine version as a
-hash of the `DEPS` and `engine` tree ids. Removing blobs under `engine/` changes that
-tree, so the mirror's own hash names no published engine. Set the upstream's:
+Upstream's `master` has no `bin/internal/engine.version`: the tool hashes the `DEPS` and
+`engine` tree ids. Removing blobs under `engine/` changes that tree, so the rewrite
+writes `bin/internal/engine.version` (which the tool prefers when tracked) into every
+commit that has `engine/` and lacks the file, holding the hash of that commit's
+original upstream tree. No environment variable is needed.
 
-- upstream hash for this master: `3f1e20a900d3040be55428ba7fe01aa07290a1e3` (engine artifacts published: yes)
-- mirror's computed hash (no artifacts): `cb3e1dc6b72c83bb15f9667faf23130c38d6a79d`
-- `FLUTTER_PREBUILT_ENGINE_VERSION=3f1e20a900d3040be55428ba7fe01aa07290a1e3`
-
-`stable` and the tags carry `engine.version`, which the rewrite leaves unchanged.
+- engine for this master: `3f1e20a900d3040be55428ba7fe01aa07290a1e3` (artifacts published: yes)
+- hash of the mirror's own tree, not published and not used: `cb3e1dc6b72c83bb15f9667faf23130c38d6a79d`
+- `stable` and the tags carry upstream's `engine.version`, unchanged.
 
 ## der (certificate or key) (1)
 
