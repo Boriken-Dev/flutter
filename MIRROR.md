@@ -6,10 +6,10 @@ Every blob a malware, secret or archive scanner may refuse was removed from ever
 commit (`git filter-repo --strip-blobs-with-ids`); the rest of the history is upstream's.
 
 - upstream `stable` commit: `c197ca5199e9ee5661e865596c9c07294dfab51c`
-- mirror `stable` commit: `2c972c48e542051dec5b46548c3e69ba956e9ef3`
-- mirror `master` commit: `ada369a4843cce989a073571097a58bac5befa72`
+- mirror `stable` commit: `255b2d07cc58470e63547816d77d0a4d04357b42`
+- mirror `master` commit: `a86ec25305a757cce7ae216dbfd02b424d748121`
 - tags: 711
-- blobs scanned in the result: 408707
+- blobs scanned in the result: 367738
 - blobs removed: 36
 
 A removed blob is absent from all commits that held it, under whatever path. The
