@@ -6,11 +6,11 @@ Every blob a malware, secret or archive scanner may refuse was removed from ever
 commit (`git filter-repo --strip-blobs-with-ids`); the rest of the history is upstream's.
 
 - upstream `stable` commit: `c197ca5199e9ee5661e865596c9c07294dfab51c`
-- mirror `stable` commit: `255b2d07cc58470e63547816d77d0a4d04357b42`
-- mirror `master` commit: `a86ec25305a757cce7ae216dbfd02b424d748121`
+- mirror `stable` commit: `389518b64ffd05de57672f8be3cc09c676dba398`
+- mirror `master` commit: `f835d9e325272c354259cc35aa277d05f6842d71`
 - tags: 711
-- blobs scanned in the result: 367738
-- blobs removed: 36
+- blobs scanned in the result: 367722
+- blobs removed: 52
 
 A removed blob is absent from all commits that held it, under whatever path. The
 path shown is one place it was seen. Tests that read these fixtures fail.
@@ -24,7 +24,7 @@ commit that has `engine/` and lacks the file, holding the hash of that commit's
 original upstream tree. No environment variable is needed.
 
 - engine for this master: `3f1e20a900d3040be55428ba7fe01aa07290a1e3` (artifacts published: yes)
-- hash of the mirror's own tree, not published and not used: `cb3e1dc6b72c83bb15f9667faf23130c38d6a79d`
+- hash of the mirror's own tree, not published and not used: `58365a2c3e1dd879b4a65b44549f8196ff500736`
 - `stable` and the tags carry upstream's `engine.version`, unchanged.
 
 ## der (certificate or key) (1)
@@ -84,6 +84,27 @@ original upstream tree. No environment variable is needed.
 | `cd2208bfae0e399accf9c9750d65f1221676ca11` | 8351 | `examples/image_list/lib/main.dart` |
 | `376d157ac3678efb449a0425db7295716f2b4613` | 887 | `packages/flutter_tools/test/data/asset_test/tls_cert/dummy-key.pem` |
 
+## unrecognised binary (16)
+
+| blob | bytes | path |
+| --- | ---: | --- |
+| `ce542efaa5124a0437f0c4db329d7ec4b7ba70a7` | 1 | `dev/bots/test/analyze-test-input/root/packages/foo/serviceaccount.enc` |
+| `025c0b1e6ca2cffdd53f0548d1018348dbc437b2` | 1298 | `dev/integration_tests/ios_add2app/Pods/EarlGrey/EarlGrey/EarlGrey.framework/Info.plist` |
+| `40eb4bcb278d93199c9eb48c97cf44fab874d88d` | 26773 | `dev/integration_tests/ios_host_app/Host.xcworkspace/xcuserdata/mravn.xcuserdatad/UserInterfaceState.xcuserstate` |
+| `8a320e662e9633cbc776b03a7542f4cff664da00` | 18656 | `engine/src/flutter/impeller/fixtures/flutter_logo.glb` |
+| `0ecae588ca88c89a58173ea80aebe42319d4c20c` | 10048 | `engine/src/flutter/impeller/fixtures/two_triangles.glb` |
+| `4c7b8803bc92781621e8ce3607149971becdaba0` | 10180 | `engine/src/flutter/impeller/fixtures/two_triangles.glb` |
+| `3937ac6969769d9b2c5f274ecb6f72c541a40a26` | 3376 | `engine/src/flutter/impeller/fixtures/two_triangles.glb` |
+| `d36dfc37a609b3032876bf5b9ad1f840d6dc97d0` | 720000 | `engine/src/flutter/shell/platform/embedder/fixtures/texture.nv12` |
+| `3b3ee01349732bfdb4e2fb54e674bc7e3de8da14` | 41488 | `engine/src/flutter/shell/platform/fuchsia/flutter/tests/tzdata/2019a/44/le/metaZones.res` |
+| `895ed2174c0d381a3d660a3b353f7c07a1001582` | 20064 | `engine/src/flutter/shell/platform/fuchsia/flutter/tests/tzdata/2019a/44/le/timezoneTypes.res` |
+| `7e0afd40558838bbecb49c027053754ae4d1ccfe` | 154224 | `engine/src/flutter/shell/platform/fuchsia/flutter/tests/tzdata/2019a/44/le/zoneinfo64.res` |
+| `1ad3a51de999858d248e04fa85fec96208afa885` | 35485 | `engine/src/flutter/shell/platform/linux/testing/gschemas/ubuntu-20.04.compiled` |
+| `0f3905597f5bd4e03874f3612dabc22511cc807f` | 73 | `engine/src/flutter/testing/scenario_app/android/android/gradle-home/.cache/daemon/5.6.4/registry.bin` |
+| `1aa489da1163a4cf716729117166c40cf66ef1f5` | 1787 | `examples/fitness/ios/LaunchScreen.storyboardc/01J-lp-oVM-view-Ze5-6b-2t3.nib` |
+| `32288e88f6e282c375921d17f7790833b009448f` | 258 | `examples/fitness/ios/LaunchScreen.storyboardc/Info.plist` |
+| `8de9beddcb77a8052f2b4a5b77daa47460b2fc80` | 832 | `examples/fitness/ios/LaunchScreen.storyboardc/UIViewController-01J-lp-oVM.nib` |
+
 ## zip (4)
 
 | blob | bytes | path |
@@ -92,7 +113,3 @@ original upstream tree. No environment variable is needed.
 | `1baf404f77172eb359c84b4ff897744a6a190885` | 33894 | `examples/stocks/android/ic_launcher.zip` |
 | `40d114086ef2ca89d1a8502238d2613b53c2b74c` | 4138 | `packages/flutter_tools/test/data/intellij/plugins/Dart/lib/Dart.jar` |
 | `3a66e611f519f89421b1089e3416f4fd336d5859` | 1822 | `packages/flutter_tools/test/data/intellij/plugins/flutter-intellij.jar` |
-
-## Kept, but a scanner may note them
-
-- unrecognised binary: 16
