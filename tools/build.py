@@ -1,6 +1,6 @@
 """Build one Flutter image for one architecture, check it, and push it.
 
-Usage: python tools/build.py PLATFORM ARCH --rev SHA --engine HASH --tree DIR --out DIR [--base IMAGE] [--push]
+Usage: python tools/build.py PLATFORM ARCH --rev SHA --engine HASH --tree DIR --out DIR [--push]
 
 PLATFORM is web, linux or windows; ARCH is amd64 or arm64. The engine's files come from the release
 `engine-<ENGINE>` of Boriken-Dev/flutter: they are fetched into --tree (each checked against the release's SHA-256
@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 REGISTRY = "ghcr.io/boriken-dev"
 PORT = 8765
 DEAD = "http://127.0.0.1:9"
-DEBIAN = "debian:13.7-slim"
+BASES = {"windows": "mcr.microsoft.com/windows/servercore:ltsc2025", "linux": "debian:13.7-slim", "web": "debian:13.7-slim"}
 
 # A plain `flutter create` app per platform, built inside the finished image.
 SMOKE = {
@@ -56,7 +56,6 @@ def main():
     ap.add_argument("--engine", required=True)
     ap.add_argument("--tree", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--base", default="", help="the image to build on; empty builds the Containerfile's Debian toolchain stage")
     ap.add_argument("--push", action="store_true")
     a = ap.parse_args()
 
@@ -92,15 +91,12 @@ def main():
                 time.sleep(0.2)
         else:
             sys.exit("build: the artifact server did not start")
-        base = a.base or f"{DEBIAN} (toolchain of the Containerfile)"
+        base = BASES[a.platform]
         desc = (f"Flutter SDK from Boriken-Dev/flutter at {short}, engine {a.engine[:12]} from its release "
-                f"engine-{a.engine[:12]}, on {base.split('@')[0]}")
+                f"engine-{a.engine[:12]}, on {base}")
         cmd = ["docker", "build", "-f", str(ROOT / "containers" / f"Containerfile.{a.platform}"), "-t", tag,
                "--build-arg", "MIRROR_URL=https://github.com/Boriken-Dev/flutter.git", "--build-arg", f"MIRROR_REV={a.rev}",
-               "--build-arg", f"FLUTTER_STORAGE_BASE_URL={storage}", "--build-arg", f"IMAGE_DESCRIPTION={desc}",
-               "--build-arg", f"BASE_NAME={base}"]
-        if a.base:
-            cmd += ["--build-arg", f"BASE={a.base}"]
+               "--build-arg", f"FLUTTER_STORAGE_BASE_URL={storage}", "--build-arg", f"IMAGE_DESCRIPTION={desc}"]
         if win:
             cmd += ["--isolation=process"]
         else:
@@ -109,6 +105,8 @@ def main():
         t0 = time.time()
         run(cmd)
         print(f"build: {tag} built in {time.time() - t0:.0f}s", flush=True)
+        # The size of each layer, newest first, so a size is traced to the step that made it.
+        print(out(["docker", "history", "--no-trunc", "--format", "{{.Size}} | {{.CreatedBy}}", tag]), flush=True)
 
         runflags = ["--rm", "-e", f"FLUTTER_STORAGE_BASE_URL={DEAD}"] + (["--isolation=process"] if win else ["--network=host"])
         # The image's own wrapper expands `$name` in a -Command string, so a Windows command travels encoded.

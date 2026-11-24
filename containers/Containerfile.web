@@ -1,10 +1,15 @@
-ARG BASE=toolchain
-FROM debian:13.7-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2 AS toolchain
+# The toolchain (the Debian base by digest, the packages, the flutter user, the entrypoint) is the `flutter` stage and
+# the `web` and `linux` stages of gmeligio/flutter-docker-image's android.Dockerfile at 05eeacdf86d0e7376f86106e61718d67cc2a922c,
+# up to the point where it clones Flutter (MIT, Copyright gmeligio; https://github.com/gmeligio/flutter-docker-image).
+# Not copied: their Flutter SDK, the Android, Ruby and Fastlane stages, and the sample app they build into a layer.
+# Their exact apt version pins are not repeated: the archive no longer serves two of them (ca-certificates 20250419,
+# ninja-build 1.12.1-1), so the packages are the same names at the digest's archive.
+FROM debian:13.7-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
 SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 ENV LANG=C.UTF-8
 USER root
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl git lcov ca-certificates unzip  \
+    && apt-get install -y --no-install-recommends curl git lcov ca-certificates unzip \
     && rm -rf /var/lib/apt/lists/*
 ENV HOME=/home/flutter
 RUN groupadd --gid 1001 flutter \
@@ -18,23 +23,19 @@ COPY --chown=flutter:flutter docker_entrypoint.sh /home/flutter/docker_entrypoin
 RUN chmod +x /home/flutter/docker_entrypoint.sh
 ENTRYPOINT [ "/home/flutter/docker_entrypoint.sh" ]
 
-FROM ${BASE}
-SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
 ARG MIRROR_URL
 ARG MIRROR_REV
 ARG IMAGE_DESCRIPTION
-ARG BASE_NAME
 ARG FLUTTER_STORAGE_BASE_URL
 LABEL org.opencontainers.image.source="https://github.com/Boriken-Dev/flutter-images" \
       org.opencontainers.image.description="${IMAGE_DESCRIPTION}" \
       org.opencontainers.image.revision="${MIRROR_REV}" \
-      org.opencontainers.image.base.name="${BASE_NAME}"
+      org.opencontainers.image.base.name="debian:13.7-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2"
 ENV FLUTTER_GIT_URL="$MIRROR_URL"
-# The base's SDK is replaced: the framework comes from the mirror at the pin with every tag (Flutter names its version
-# from the newest tag and the commits since it); the engine and the Dart SDK from the artifact release, served at
-# FLUTTER_STORAGE_BASE_URL for this build only.
-RUN rm -rf "$FLUTTER_ROOT" \
-    && git -c core.autocrlf=false clone --quiet --filter=blob:none --no-tags --branch main --single-branch "$MIRROR_URL" "$FLUTTER_ROOT" \
+# Flutter, ours: the framework comes from the mirror at the pin with every tag (Flutter names its version from the newest
+# tag and the commits since it); the engine and the Dart SDK from the artifact release, served at FLUTTER_STORAGE_BASE_URL
+# for this build only.
+RUN git -c core.autocrlf=false clone --quiet --filter=blob:none --no-tags --branch main --single-branch "$MIRROR_URL" "$FLUTTER_ROOT" \
     && git -C "$FLUTTER_ROOT" config core.autocrlf false \
     && git -C "$FLUTTER_ROOT" checkout --quiet -B main "$MIRROR_REV" \
     && git -C "$FLUTTER_ROOT" fetch --quiet --no-tags origin '+refs/tags/*:refs/tags/*'

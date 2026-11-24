@@ -18,13 +18,6 @@ permissions:
   packages: write
   contents: read
 
-env:
-  # gmeligio's images (github.com/gmeligio/flutter-docker-image, MIT) by digest: web and linux are published for amd64 only,
-  # so arm64 builds the Containerfile's own Debian toolchain stage instead.
-  BASE_WEB: ghcr.io/gmeligio/flutter-web:3.50.0@sha256:c5fd2f7a4da0c01884aff9db74ea60862b55864131a4aacada7db33b021a6d38
-  BASE_LINUX: ghcr.io/gmeligio/flutter-linux:3.50.1@sha256:a9e99a821a9d638957de8ccdfa291aeb59de138efddea6698f64c05da911d217
-  BASE_WINDOWS: ghcr.io/gmeligio/flutter-windows:3.50.1@sha256:f75ba05cdafc1cc4461b604d45b5cb73cd677cb0f312c1d5599b811cbf2787ef
-
 jobs:
   plan:
     runs-on: ubuntu-24.04
@@ -53,9 +46,8 @@ jobs:
           unix='[]'
           for p in web linux; do
             case ",$PLATFORMS," in *",$p,"*)
-              base="BASE_${p^^}"
-              unix=$(echo "$unix" | jq -c --arg p "$p" --arg base "${!base}" \
-                '. + [{platform:$p, arch:"amd64", os:"ubuntu-24.04", base:$base}, {platform:$p, arch:"arm64", os:"ubuntu-24.04-arm", base:""}]');;
+              unix=$(echo "$unix" | jq -c --arg p "$p" \
+                '. + [{platform:$p, arch:"amd64", os:"ubuntu-24.04"}, {platform:$p, arch:"arm64", os:"ubuntu-24.04-arm"}]');;
             esac
           done
           windows=false
@@ -86,7 +78,7 @@ jobs:
         run: |
           python3 tools/build.py ${{ matrix.platform }} ${{ matrix.arch }} \
             --rev ${{ needs.plan.outputs.rev }} --engine ${{ inputs.engine }} \
-            --tree "$RUNNER_TEMP/tree" --out "$RUNNER_TEMP/out" --base "${{ matrix.base }}" --push
+            --tree "$RUNNER_TEMP/tree" --out "$RUNNER_TEMP/out" --push
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: result-${{ matrix.platform }}-${{ matrix.arch }}
@@ -124,7 +116,7 @@ jobs:
         run: |
           python tools/build.py windows amd64 `
             --rev ${{ needs.plan.outputs.rev }} --engine ${{ inputs.engine }} `
-            --tree "$env:RUNNER_TEMP\tree" --out "$env:RUNNER_TEMP\out" --base "$env:BASE_WINDOWS" --push
+            --tree "$env:RUNNER_TEMP\tree" --out "$env:RUNNER_TEMP\out" --push
           if ($LASTEXITCODE -ne 0) { exit 1 }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

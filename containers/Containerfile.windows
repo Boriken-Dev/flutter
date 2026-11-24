@@ -1,19 +1,56 @@
 # escape=`
-ARG BASE
-FROM ${BASE}
+# The toolchain (Server Core by digest, MinGit, the user paths, the Visual Studio Build Tools workloads) is gmeligio/flutter-docker-image's
+# windows.Dockerfile at 05eeacdf86d0e7376f86106e61718d67cc2a922c up to the point where it clones Flutter (MIT, Copyright gmeligio;
+# https://github.com/gmeligio/flutter-docker-image). Not copied: their Flutter SDK, the sample app they build into a layer,
+# and their test stage. The installer's logs, the installer, TEMP and the package cache are removed in the layer that makes them.
+FROM mcr.microsoft.com/windows/servercore:ltsc2025@sha256:a43c2d41a3d6e940dec865731e2f5db5c3e03f705f5300ef0b5817d3e01ecfb1
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+ARG git_version=2.56.1
+ARG git_sha256=baa40c1b8d5897826f47c2b819156553b89833bc52cb42cdfca7d1f0faeed34a
+ARG git_installation_path="C:\Program Files\Git"
+ARG vs_win11sdk_build=22621
+ENV USERPROFILE="C:\Users\ContainerUser"
+ENV SDK_ROOT="${USERPROFILE}\sdks"
+ENV FLUTTER_ROOT="${SDK_ROOT}\flutter"
+WORKDIR "$USERPROFILE"
+RUN $installer = \"MinGit-${env:git_version}-busybox-64-bit.zip\"; `
+    $url = \"https://github.com/git-for-windows/git/releases/download/v${env:git_version}.windows.1/${installer}\"; `
+    Invoke-WebRequest -Uri $url -OutFile $installer; `
+    if ((Get-FileHash $installer -Algorithm SHA256).Hash -ne $env:git_sha256) { throw \"$installer does not match its SHA-256\" }; `
+    Expand-Archive -Path $installer -DestinationPath $env:git_installation_path; `
+    Remove-Item -Path $installer
+USER ContainerAdministrator
+RUN [Environment]::SetEnvironmentVariable('PATH', \"${env:PATH};${env:git_installation_path}\cmd;${env:git_installation_path}\usr\bin;${env:FLUTTER_ROOT}\bin;${env:FLUTTER_ROOT}\bin\cache\dart-sdk\bin;C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\msbuild\current\bin\", 'Machine')
+RUN $env:GIT_CONFIG_NOSYSTEM=1; git config --system --unset-all include.path
+RUN Invoke-WebRequest -Uri https://aka.ms/vs/17/release/vs_buildtools.exe -OutFile vs_BuildTools.exe; `
+    $p = Start-Process vs_BuildTools.exe -ArgumentList \"--quiet --wait --norestart --nocache `
+    --add Microsoft.VisualStudio.Component.VC.CMake.Project `
+    --add Microsoft.VisualStudio.Component.Windows11SDK.${env:vs_win11sdk_build} `
+    --add Microsoft.VisualStudio.Workload.VCTools\" `
+    -Wait -PassThru; `
+    if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { `
+      Write-Host \"vs_buildtools.exe failed with exit code $($p.ExitCode)\"; `
+      Get-Content -Path \"$env:TEMP\dd_*.log\" -ErrorAction SilentlyContinue; `
+      exit $p.ExitCode `
+    }; `
+    Remove-Item vs_BuildTools.exe; `
+    Get-ChildItem (Join-Path $env:ProgramData 'Microsoft\VisualStudio\Packages') -Directory | `
+      Where-Object { $_.Name -match 'VC.CMake.Project|Windows11SDK|Workload.VCTools' } | ForEach-Object { Write-Host $_.Name }; `
+    foreach ($d in @($env:TEMP, 'C:\Windows\Temp', (Join-Path $env:ProgramData 'Package Cache'))) { `
+      $s = (Get-ChildItem $d -Recurse -Force -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum; `
+      Write-Host ('removing {0,14:N0} bytes from {1}' -f $s, $d); `
+      Get-ChildItem $d -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue `
+    }
+USER ContainerUser
 ARG MIRROR_URL
 ARG MIRROR_REV
 ARG IMAGE_DESCRIPTION
-ARG BASE_NAME
 ARG FLUTTER_STORAGE_BASE_URL
 LABEL org.opencontainers.image.source="https://github.com/Boriken-Dev/flutter-images" `
       org.opencontainers.image.description="${IMAGE_DESCRIPTION}" `
       org.opencontainers.image.revision="${MIRROR_REV}" `
-      org.opencontainers.image.base.name="${BASE_NAME}"
+      org.opencontainers.image.base.name="mcr.microsoft.com/windows/servercore:ltsc2025@sha256:a43c2d41a3d6e940dec865731e2f5db5c3e03f705f5300ef0b5817d3e01ecfb1"
 ENV FLUTTER_GIT_URL="${MIRROR_URL}"
-USER ContainerUser
-RUN Remove-Item -Recurse -Force $env:FLUTTER_ROOT
 RUN git -c core.autocrlf=false -c core.longpaths=true clone --quiet --filter=blob:none --no-tags --branch main --single-branch $env:MIRROR_URL $env:FLUTTER_ROOT; `
     if ($LASTEXITCODE -ne 0) { exit 1 }; `
     git config --global --add safe.directory '*'; `
@@ -33,3 +70,5 @@ RUN flutter --version; if ($LASTEXITCODE -ne 0) { exit 1 }; `
     $want = (Get-Content -Raw \"$env:FLUTTER_ROOT\bin\internal\engine.version\").Trim(); `
     if ($stamp -ne $want) { Write-Host \"engine.stamp $stamp is not $want\"; exit 1 }; `
     flutter --version; if ($LASTEXITCODE -ne 0) { exit 1 }
+COPY docker_entrypoint.ps1 "docker_entrypoint.ps1"
+ENTRYPOINT "C:\Users\ContainerUser\docker_entrypoint.ps1"
