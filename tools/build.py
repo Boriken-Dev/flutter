@@ -27,8 +27,11 @@ DEBIAN = "debian:13.7-slim"
 SMOKE = {
     "web": "set -o pipefail; cd /tmp && flutter create smoke_app >/dev/null && cd smoke_app && flutter build web 2>&1 | tail -n 8 && ls build/web",
     "linux": "set -o pipefail; cd /tmp && flutter create smoke_app >/dev/null && cd smoke_app && flutter build linux 2>&1 | tail -n 8 && ls build/linux",
-    "windows": "Set-Location $env:USERPROFILE; flutter create smoke_app | Out-Null; Set-Location smoke_app; "
-               "flutter build windows 2>&1 | Select-Object -Last 8; if ($LASTEXITCODE -ne 0) { exit 1 }",
+    # flutter writes notices to stderr; as error records they would end the script, so the preference is Continue and
+    # the verdict is flutter's exit code.
+    "windows": "$ErrorActionPreference = 'Continue'; Set-Location $env:USERPROFILE; flutter create smoke_app | Out-Null; "
+               "Set-Location smoke_app; flutter build windows 2>&1 | ForEach-Object { [string]$_ } | Select-Object -Last 8; "
+               "if ($LASTEXITCODE -ne 0) { exit 1 }",
 }
 
 
