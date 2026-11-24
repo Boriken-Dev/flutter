@@ -9,6 +9,7 @@ manifest) and served on this machine, and the build reaches them through that se
 fails the run. The Flutter version is written to --out/version.txt for the manifest job.
 """
 import argparse
+import base64
 import json
 import socket
 import subprocess
@@ -110,8 +111,12 @@ def main():
         print(f"build: {tag} built in {time.time() - t0:.0f}s", flush=True)
 
         runflags = ["--rm", "-e", f"FLUTTER_STORAGE_BASE_URL={DEAD}"] + (["--isolation=process"] if win else ["--network=host"])
-        shell = ["powershell", "-NoProfile", "-Command"] if win else ["bash", "-c"]
-        ver = subprocess.run(["docker", "run", *runflags, tag, *shell, "flutter --version --machine"],
+        # The image's own wrapper expands `$name` in a -Command string, so a Windows command travels encoded.
+        def shell(script):
+            if win:
+                return ["powershell", "-NoProfile", "-EncodedCommand", base64.b64encode(script.encode("utf-16-le")).decode()]
+            return ["bash", "-c", script]
+        ver = subprocess.run(["docker", "run", *runflags, tag, *shell("flutter --version --machine")],
                              capture_output=True, text=True, encoding="utf-8", errors="replace")
         try:
             info = json.loads(ver.stdout[ver.stdout.index("{"):ver.stdout.rindex("}") + 1])
@@ -126,7 +131,7 @@ def main():
         (outdir / "size.txt").write_text(size, encoding="utf-8", newline="\n")
 
         t0 = time.time()
-        run(["docker", "run", *runflags, tag, *shell, SMOKE[a.platform]])
+        run(["docker", "run", *runflags, tag, *shell(SMOKE[a.platform])])
         print(f"build: sample app built in {time.time() - t0:.0f}s", flush=True)
 
         rows = [l.split("\t") for l in log.read_text(encoding="utf-8").splitlines() if l] if log.exists() else []
