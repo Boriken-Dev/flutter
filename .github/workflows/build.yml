@@ -95,6 +95,20 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Docker's storage on D:\
+        shell: pwsh
+        run: |
+          # C: has too little room for the Visual Studio Build Tools layer (its commit writes a second copy).
+          Get-PSDrive -PSProvider FileSystem | Format-Table Name, Used, Free
+          Stop-Service docker -ErrorAction SilentlyContinue
+          $dir = Join-Path $env:ProgramData 'docker\config'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          $file = Join-Path $dir 'daemon.json'
+          $cfg = if (Test-Path $file) { Get-Content -Raw $file | ConvertFrom-Json } else { [pscustomobject]@{} }
+          $cfg | Add-Member -NotePropertyName 'data-root' -NotePropertyValue 'D:\docker' -Force
+          $cfg | ConvertTo-Json | Set-Content $file
+          Start-Service docker
+          docker info --format '{{.DockerRootDir}}'
       - name: Docker in Windows-container mode
         shell: pwsh
         run: |
