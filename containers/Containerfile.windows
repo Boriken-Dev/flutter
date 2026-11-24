@@ -1,0 +1,35 @@
+# escape=`
+ARG BASE
+FROM ${BASE}
+SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
+ARG MIRROR_URL
+ARG MIRROR_REV
+ARG IMAGE_DESCRIPTION
+ARG BASE_NAME
+ARG FLUTTER_STORAGE_BASE_URL
+LABEL org.opencontainers.image.source="https://github.com/Boriken-Dev/flutter-images" `
+      org.opencontainers.image.description="${IMAGE_DESCRIPTION}" `
+      org.opencontainers.image.revision="${MIRROR_REV}" `
+      org.opencontainers.image.base.name="${BASE_NAME}"
+ENV FLUTTER_GIT_URL="${MIRROR_URL}"
+USER ContainerUser
+RUN Remove-Item -Recurse -Force $env:FLUTTER_ROOT
+RUN git -c core.autocrlf=false -c core.longpaths=true clone --quiet --filter=blob:none --no-tags --branch main --single-branch $env:MIRROR_URL $env:FLUTTER_ROOT; `
+    if ($LASTEXITCODE -ne 0) { exit 1 }; `
+    git config --global --add safe.directory '*'; `
+    git -C $env:FLUTTER_ROOT config core.autocrlf false; `
+    git -C $env:FLUTTER_ROOT config core.longpaths true; `
+    git -C $env:FLUTTER_ROOT checkout --quiet -B main $env:MIRROR_REV; `
+    if ($LASTEXITCODE -ne 0) { exit 1 }; `
+    git -C $env:FLUTTER_ROOT fetch --quiet --no-tags origin '+refs/tags/*:refs/tags/*'; `
+    if ($LASTEXITCODE -ne 0) { exit 1 }
+RUN flutter --version; if ($LASTEXITCODE -ne 0) { exit 1 }; `
+    dart --disable-analytics; `
+    flutter config --no-cli-animations --no-analytics --no-enable-android --no-enable-web --no-enable-linux-desktop `
+      --no-enable-fuchsia --no-enable-custom-devices --no-enable-ios --no-enable-macos-desktop --enable-windows-desktop; `
+    if ($LASTEXITCODE -ne 0) { exit 1 }; `
+    flutter precache --windows; if ($LASTEXITCODE -ne 0) { exit 1 }; `
+    $stamp = (Get-Content -Raw \"$env:FLUTTER_ROOT\bin\cache\engine.stamp\").Trim(); `
+    $want = (Get-Content -Raw \"$env:FLUTTER_ROOT\bin\internal\engine.version\").Trim(); `
+    if ($stamp -ne $want) { Write-Host \"engine.stamp $stamp is not $want\"; exit 1 }; `
+    flutter --version; if ($LASTEXITCODE -ne 0) { exit 1 }

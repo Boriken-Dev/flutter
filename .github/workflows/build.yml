@@ -1,0 +1,158 @@
+name: build
+
+# Started by hand only: the images are built when the pin moves, never on a push or a schedule.
+on:
+  workflow_dispatch:
+    inputs:
+      mirror:
+        description: Commit of Boriken-Dev/flutter to build (short or full)
+        default: 33d7f282aaef7665096e5acd368d3c2ee226f6bb
+      engine:
+        description: Engine hash that commit's bin/internal/engine.version names
+        default: 89573e968cbf3febdf4f07189cc2bef6cbef830b
+      platforms:
+        description: Comma list of web, linux, windows
+        default: web,linux,windows
+
+permissions:
+  packages: write
+  contents: read
+
+env:
+  # gmeligio's images (github.com/gmeligio/flutter-docker-image, MIT) by digest: web and linux are published for amd64 only,
+  # so arm64 builds the Containerfile's own Debian toolchain stage instead.
+  BASE_WEB: ghcr.io/gmeligio/flutter-web:3.50.0@sha256:c5fd2f7a4da0c01884aff9db74ea60862b55864131a4aacada7db33b021a6d38
+  BASE_LINUX: ghcr.io/gmeligio/flutter-linux:3.50.1@sha256:a9e99a821a9d638957de8ccdfa291aeb59de138efddea6698f64c05da911d217
+  BASE_WINDOWS: ghcr.io/gmeligio/flutter-windows:3.50.1@sha256:f75ba05cdafc1cc4461b604d45b5cb73cd677cb0f312c1d5599b811cbf2787ef
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      rev: ${{ steps.plan.outputs.rev }}
+      short: ${{ steps.plan.outputs.short }}
+      unix: ${{ steps.plan.outputs.unix }}
+      windows: ${{ steps.plan.outputs.windows }}
+      platforms: ${{ steps.plan.outputs.platforms }}
+    steps:
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MIRROR: ${{ inputs.mirror }}
+          ENGINE: ${{ inputs.engine }}
+          PLATFORMS: ${{ inputs.platforms }}
+        run: |
+          set -euo pipefail
+          rev=$(gh api "repos/Boriken-Dev/flutter/commits/$MIRROR" --jq .sha)
+          have=$(curl -fsSL "https://raw.githubusercontent.com/Boriken-Dev/flutter/$rev/bin/internal/engine.version" | tr -d '[:space:]')
+          if [ "$have" != "$ENGINE" ]; then
+            echo "::error::$rev names engine $have, not $ENGINE"
+            exit 1
+          fi
+          curl -fsSL "https://github.com/Boriken-Dev/flutter/releases/download/engine-$ENGINE/MANIFEST.txt" -o /dev/null
+          unix='[]'
+          for p in web linux; do
+            case ",$PLATFORMS," in *",$p,"*)
+              base="BASE_${p^^}"
+              unix=$(echo "$unix" | jq -c --arg p "$p" --arg base "${!base}" \
+                '. + [{platform:$p, arch:"amd64", os:"ubuntu-24.04", base:$base}, {platform:$p, arch:"arm64", os:"ubuntu-24.04-arm", base:""}]');;
+            esac
+          done
+          windows=false
+          case ",$PLATFORMS," in *",windows,"*) windows=true;; esac
+          {
+            echo "rev=$rev"
+            echo "short=${rev:0:10}"
+            echo "unix=$unix"
+            echo "windows=$windows"
+            echo "platforms=$(echo "$unix" | jq -c '[.[].platform] | unique')"
+          } >> "$GITHUB_OUTPUT"
+
+  unix:
+    needs: plan
+    if: needs.plan.outputs.unix != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.unix) }}
+    name: ${{ matrix.platform }} ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Log in to ghcr.io
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Build, check and push
+        run: |
+          python3 tools/build.py ${{ matrix.platform }} ${{ matrix.arch }} \
+            --rev ${{ needs.plan.outputs.rev }} --engine ${{ inputs.engine }} \
+            --tree "$RUNNER_TEMP/tree" --out "$RUNNER_TEMP/out" --base "${{ matrix.base }}" --push
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: result-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            ${{ runner.temp }}/out/version.txt
+            ${{ runner.temp }}/out/size.txt
+            ${{ runner.temp }}/out/served.log
+
+  windows:
+    needs: plan
+    if: needs.plan.outputs.windows == 'true'
+    name: windows amd64
+    runs-on: windows-2025
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Docker in Windows-container mode
+        shell: pwsh
+        run: |
+          docker version
+          docker info --format '{{.OSType}} {{.Isolation}} {{.OperatingSystem}}'
+          if ((docker info --format '{{.OSType}}') -ne 'windows') {
+            & "$env:ProgramFiles\Docker\docker.exe" version | Out-Null
+            & "$env:ProgramFiles\Docker\DockerCli.exe" -SwitchWindowsEngine
+          }
+          docker info --format '{{.OSType}}'
+      - name: Let the build reach the artifact server
+        shell: pwsh
+        run: netsh advfirewall firewall add rule name=flutter-storage dir=in action=allow protocol=TCP localport=8765
+      - name: Log in to ghcr.io
+        shell: pwsh
+        run: '"${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin'
+      - name: Build, check and push
+        shell: pwsh
+        run: |
+          python tools/build.py windows amd64 `
+            --rev ${{ needs.plan.outputs.rev }} --engine ${{ inputs.engine }} `
+            --tree "$env:RUNNER_TEMP\tree" --out "$env:RUNNER_TEMP\out" --base "$env:BASE_WINDOWS" --push
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: result-windows-amd64
+          path: |
+            ${{ runner.temp }}/out/version.txt
+            ${{ runner.temp }}/out/size.txt
+            ${{ runner.temp }}/out/served.log
+
+  manifest:
+    needs: [plan, unix]
+    if: needs.plan.outputs.unix != '[]'
+    strategy:
+      matrix:
+        platform: ${{ fromJSON(needs.plan.outputs.platforms) }}
+    name: ${{ matrix.platform }} index
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: result-${{ matrix.platform }}-amd64
+      - name: Log in to ghcr.io
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Join the architectures
+        run: |
+          set -euo pipefail
+          name=ghcr.io/boriken-dev/flutter-${{ matrix.platform }}
+          short=${{ needs.plan.outputs.short }}
+          version=$(cat version.txt)
+          docker buildx imagetools create -t "$name:$short" -t "$name:$version" "$name:$short-amd64" "$name:$short-arm64"
+          docker buildx imagetools inspect "$name:$version"

@@ -1,0 +1,47 @@
+ARG BASE=toolchain
+FROM debian:13.7-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2 AS toolchain
+SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+ENV LANG=C.UTF-8
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl git lcov ca-certificates unzip  \
+    && rm -rf /var/lib/apt/lists/*
+ENV HOME=/home/flutter
+RUN groupadd --gid 1001 flutter \
+    && useradd --create-home --shell /bin/bash --uid 1001 --gid flutter flutter
+USER flutter:flutter
+WORKDIR /home/flutter
+ENV SDK_ROOT=/home/flutter/sdks
+ENV FLUTTER_ROOT=/home/flutter/sdks/flutter
+ENV PATH="$PATH:/home/flutter/sdks/flutter/bin:/home/flutter/sdks/flutter/bin/cache/dart-sdk/bin"
+COPY --chown=flutter:flutter docker_entrypoint.sh /home/flutter/docker_entrypoint.sh
+RUN chmod +x /home/flutter/docker_entrypoint.sh
+ENTRYPOINT [ "/home/flutter/docker_entrypoint.sh" ]
+
+FROM ${BASE}
+SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+ARG MIRROR_URL
+ARG MIRROR_REV
+ARG IMAGE_DESCRIPTION
+ARG BASE_NAME
+ARG FLUTTER_STORAGE_BASE_URL
+LABEL org.opencontainers.image.source="https://github.com/Boriken-Dev/flutter-images" \
+      org.opencontainers.image.description="${IMAGE_DESCRIPTION}" \
+      org.opencontainers.image.revision="${MIRROR_REV}" \
+      org.opencontainers.image.base.name="${BASE_NAME}"
+ENV FLUTTER_GIT_URL="$MIRROR_URL"
+# The base's SDK is replaced: the framework comes from the mirror at the pin with every tag (Flutter names its version
+# from the newest tag and the commits since it); the engine and the Dart SDK from the artifact release, served at
+# FLUTTER_STORAGE_BASE_URL for this build only.
+RUN rm -rf "$FLUTTER_ROOT" \
+    && git -c core.autocrlf=false clone --quiet --filter=blob:none --no-tags --branch main --single-branch "$MIRROR_URL" "$FLUTTER_ROOT" \
+    && git -C "$FLUTTER_ROOT" config core.autocrlf false \
+    && git -C "$FLUTTER_ROOT" checkout --quiet -B main "$MIRROR_REV" \
+    && git -C "$FLUTTER_ROOT" fetch --quiet --no-tags origin '+refs/tags/*:refs/tags/*'
+RUN flutter --version \
+    && dart --disable-analytics \
+    && flutter config --no-cli-animations --no-analytics --no-enable-android --no-enable-fuchsia --no-enable-custom-devices \
+         --no-enable-ios --no-enable-macos-desktop --no-enable-linux-desktop --enable-web \
+    && flutter precache --web \
+    && test "$(cat "$FLUTTER_ROOT/bin/cache/engine.stamp")" = "$(cat "$FLUTTER_ROOT/bin/internal/engine.version")" \
+    && flutter --version
