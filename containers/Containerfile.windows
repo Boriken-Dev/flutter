@@ -41,6 +41,10 @@ RUN Invoke-WebRequest -Uri https://aka.ms/vs/17/release/vs_buildtools.exe -OutFi
       Write-Host ('removing {0,14:N0} bytes from {1}' -f $s, $d); `
       Get-ChildItem $d -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue `
     }
+# Server Core ships a stale root store and Dart's TLS fails against pub.dev without the current roots.
+RUN certutil -generateSSTFromWU C:\roots.sst; if ($LASTEXITCODE -ne 0) { exit 1 }; `
+    Import-Certificate -FilePath C:\roots.sst -CertStoreLocation Cert:\LocalMachine\Root | Out-Null; `
+    Remove-Item C:\roots.sst
 USER ContainerUser
 ARG MIRROR_URL
 ARG MIRROR_REV
