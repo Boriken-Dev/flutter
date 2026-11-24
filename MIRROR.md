@@ -7,9 +7,9 @@ commit (`git filter-repo --strip-blobs-with-ids`); the rest of the history is up
 
 - upstream `stable` commit: `ae9b586f34a8443573f82ef57c3bf914a908cbf7`
 - mirror `stable` commit: `8cc974b50b4e166e26aeda422bfaf3ed1790a3bb`
-- mirror `master` commit: `33d7f282aaef7665096e5acd368d3c2ee226f6bb`
-- tags: 703
-- blobs scanned in the result: 368241
+- mirror `master` commit: `8af4a3e4098b3cbcf769ce56f649f981c5d2e07c`
+- tags: 705
+- blobs scanned in the result: 368345
 - blobs removed: 52
 
 A removed blob is absent from all commits that held it, under whatever path. The
@@ -23,8 +23,8 @@ writes `bin/internal/engine.version` (which the tool prefers when tracked) into 
 commit that has `engine/` and lacks the file, holding the hash of that commit's
 original upstream tree. No environment variable is needed.
 
-- engine for this master: `89573e968cbf3febdf4f07189cc2bef6cbef830b` (artifacts published: yes)
-- hash of the mirror's own tree, not published and not used: `a7cad16a7b91ab26ecd34e77f88858800d44b792`
+- engine for this master: `67b01ec26a669ac333607019f4b8dac73593fe00` (artifacts published: yes)
+- hash of the mirror's own tree, not published and not used: `9cd4318e07cda48b1cf7f311f5ed22598c6d2a54`
 - `stable` and the tags carry upstream's `engine.version`, unchanged.
 
 ## der (certificate or key) (1)
