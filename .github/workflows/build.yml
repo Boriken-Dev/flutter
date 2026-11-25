@@ -1,18 +1,23 @@
 name: build
 
-# Lives on the `images` branch, the repository's default, so it can be started by hand; it shares no history with the mirrored branches.
-# Started by hand only: the images are built when the pin moves, never on a push or a schedule.
+# Called by flutter-images.yml, the dispatcher the default branch carries (flutter_mirror.py adds it at each sync);
+# GitHub starts a manual run only from a workflow file on the default branch. The images are built when the pin
+# moves, never on a push or a schedule.
+
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       mirror:
         description: Commit of Boriken-Dev/flutter to build (short or full)
-        default: 33d7f282aaef7665096e5acd368d3c2ee226f6bb
+        required: true
+        type: string
       engine:
         description: Engine hash that commit's bin/internal/engine.version names
-        default: 89573e968cbf3febdf4f07189cc2bef6cbef830b
+        required: true
+        type: string
       platforms:
         description: Comma list of web, linux, windows
+        type: string
         default: web,linux,windows
 
 permissions:
@@ -73,6 +78,8 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: images
       - name: Log in to ghcr.io
         run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
       - name: Build, check and push
@@ -96,6 +103,8 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: images
       - name: Docker's storage on D:\
         shell: pwsh
         run: |

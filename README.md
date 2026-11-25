@@ -1,6 +1,6 @@
 # Flutter container images (the `images` branch of Boriken-Dev/flutter)
 
-This orphan branch, the repository's default, holds the tooling that builds container images of the Flutter SDK for web, Linux and Windows builds, made from Boriken Dev's
+This orphan branch holds the tooling that builds container images of the Flutter SDK for web, Linux and Windows builds, made from Boriken Dev's
 mirrors. Building from one of them makes no request to Google's storage or to `flutter/flutter`.
 
 | Image | Platforms | Builds |
@@ -56,10 +56,12 @@ The defaults in `build.yml` are the mirror and engine pins; the rest are in the 
 
 ## Running the workflow
 
-The workflow runs only when started by hand, never on a push or a schedule:
+`build.yml` here is a reusable workflow. GitHub starts a manual run only from the default branch, so
+`.github/workflows/flutter-images.yml` on `stable` (one commit on top of the mirrored head, put back by `flutter_mirror.py`
+at each sync) calls it from this branch. The workflow runs only when started by hand, never on a push or a schedule:
 
 ```sh
-gh workflow run build.yml -R Boriken-Dev/flutter --ref images \
+gh workflow run flutter-images.yml -R Boriken-Dev/flutter \
   -f mirror=<commit of Boriken-Dev/flutter> -f engine=<its bin/internal/engine.version> -f platforms=web,linux,windows
 ```
 
