@@ -1,5 +1,6 @@
 name: build
 
+# Lives on the `images` branch, the repository's default, so it can be started by hand; it shares no history with the mirrored branches.
 # Started by hand only: the images are built when the pin moves, never on a push or a schedule.
 on:
   workflow_dispatch:

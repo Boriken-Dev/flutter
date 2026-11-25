@@ -27,7 +27,7 @@ ARG MIRROR_URL
 ARG MIRROR_REV
 ARG IMAGE_DESCRIPTION
 ARG FLUTTER_STORAGE_BASE_URL
-LABEL org.opencontainers.image.source="https://github.com/Boriken-Dev/flutter-images" \
+LABEL org.opencontainers.image.source="https://github.com/Boriken-Dev/flutter" \
       org.opencontainers.image.description="${IMAGE_DESCRIPTION}" \
       org.opencontainers.image.revision="${MIRROR_REV}" \
       org.opencontainers.image.base.name="debian:13.7-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2"

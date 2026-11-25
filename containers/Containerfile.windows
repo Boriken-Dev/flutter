@@ -50,7 +50,7 @@ ARG MIRROR_URL
 ARG MIRROR_REV
 ARG IMAGE_DESCRIPTION
 ARG FLUTTER_STORAGE_BASE_URL
-LABEL org.opencontainers.image.source="https://github.com/Boriken-Dev/flutter-images" `
+LABEL org.opencontainers.image.source="https://github.com/Boriken-Dev/flutter" `
       org.opencontainers.image.description="${IMAGE_DESCRIPTION}" `
       org.opencontainers.image.revision="${MIRROR_REV}" `
       org.opencontainers.image.base.name="mcr.microsoft.com/windows/servercore:ltsc2025@sha256:a43c2d41a3d6e940dec865731e2f5db5c3e03f705f5300ef0b5817d3e01ecfb1"
