@@ -1,0 +1,29 @@
+name: flutter-images
+
+# Started by hand: builds the Flutter container images with the workflow of the `images` branch. GitHub starts a manual
+# run only from a workflow file on the default branch, so this one file is all the default branch adds to the mirror.
+# flutter_mirror.py puts it back at each sync.
+on:
+  workflow_dispatch:
+    inputs:
+      mirror:
+        description: Commit of Boriken-Dev/flutter to build (short or full)
+        required: true
+      engine:
+        description: Engine hash that commit's bin/internal/engine.version names
+        required: true
+      platforms:
+        description: Comma list of web, linux, windows
+        default: web,linux,windows
+
+permissions:
+  packages: write
+  contents: read
+
+jobs:
+  build:
+    uses: Boriken-Dev/flutter/.github/workflows/build.yml@images
+    with:
+      mirror: ${{ inputs.mirror }}
+      engine: ${{ inputs.engine }}
+      platforms: ${{ inputs.platforms }}
